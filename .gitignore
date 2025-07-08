@@ -13,3 +13,8 @@ states/
 # Optional
 .env
 .env.local
+
+# Node
+node_modules
+pnpm-lock.yaml
+yarn.lock
