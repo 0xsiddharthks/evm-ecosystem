@@ -1,5 +1,5 @@
 {
-  "name": "packages",
+  "name": "evm-ecosystem",
   "private": true,
   "scripts": {
     "build": "turbo run build",
