@@ -1,0 +1,116 @@
+# LZ Protocol
+
+- OApp
+    - OApp.sol [Extends OAppSender , OAppReceiver]
+        - OApp can be specified as either Sender or Receiver or both, depending upon how it overrides the oAppVersion function.
+        - OAppSender.sol [Extends OAppCore]
+            - \_quote
+            - \_lzsend
+                - Has some guardrails, to make sure the fees being specified in the message is the same as the value transfer inside the message
+        - OAppReceiver.sol [Extends OAppCore]
+            - view function for initializable (checks peers from dst ⇒ source)
+        - OAppCore.sol
+            - Logic for managing peers and delegates
+            - Delegate: Accounts that can change config (on endpoint / ULN) on behalf of the OApp
+            - Peers: mapping(eid => OAppAddress) | Addresses of OApps on different endpoints that it can interact with
+- Protocol
+    - EndpointV2.sol [Extends MessagingChannel, MessageLibManager, MessagingComposer, MessagingContext]
+        - ABI:
+            - quote
+                - sendLib.quote
+            - send
+                - sendLib.send
+                - emit PacketSent event
+                - assert fee sent with message is same as that required by sendLib
+                - refund excess fee to refundAddress
+            - verify (sealer)
+                - Verify the message is sent from the receiveUlnLib
+                - insert the message into the message channel
+            - lzReceive
+            - clear
+            - recoverToken
+        - Offchain View Functions:
+            - initializable : ⇒ OAppReceiver . initializable (checks peers from dst → source)
+            - verifiable: checks lazyInboundNonce and if Payload is empty
+        - MessageLibManager.sol
+            - Core job: to find the receive / send library address for any given oApp and EID pair.
+            - Maintains mappings, which can only be edited by OApp delegate
+                - mapping(sender => mapping(eid => lib))
+                - mapping(receiver => mapping(eid => lib))
+            - Maintains defaults
+            - Allow setting ULNConfig (only OApp delegate can set)
+        - MessagingContext.sol
+            - sendContext modifier, which acts as re-entrancy guard
+        - MessagingChannel.sol
+            - maintains mapping for inbound / outbound nonces:
+                - mapping(sender ⇒ mapping ( dstEid ⇒ mapping (receiver ))) outboundNonce
+                - mapping(receiver ⇒ mapping ( srcEid ⇒ mapping (sender))) lazyInboundNonce
+            - mapping for inboundPayloadHash (bytes32)
+                - mapping(receiver ⇒ mapping ( srcEid ⇒ mapping (sender ⇒ mapping ( inboundNonce ⇒ payloadHash ))))
+                    - this is updated by sealer
+            - view functions:
+                - inbound nonce, lazy inbound nonce, outbound nonce
+            - OApp control methods: skip, nilify, burn
+        - MessagingComposer.sol
+            - handle lzCompose
+                - sendCompose
+                - lzCompose
+                - lzComposeAlert
+    - MessageLib
+        - Has the isSupportedEid function
+- MessageLib
+    - uln
+        - has a messageLibType , which can be `Receive | Send | SendAndReceive`
+        - SendUln302.sol [extends SendUlnBase]
+            - AIM: handle fee quotes / assign job
+            - setConfig (Called via endpoint [messageLibManager] )
+        - ReceiveUln302.sol [extends ReceiveUlnBase, ReceiveLibBaseE2]
+            - setConfig (Called via endpoint [messageLibManager] )
+        - ReceiveUlnBase.sol [extends UlnBase.sol]
+            - verifiable view function
+        - SendUlnBase.sol [extends UlnBase.sol]
+        - UlnBase.sol
+            - getUlnConfig
+            - \_setUlnConfig (additional assertions when setting UlnConfig)
+        - ReceiveLibBaseE2.sol [Extends MessageLibBase]
+            - main usecase is to be an adapter for endpointV1 in case of Uln301
+            - Has the isSupportedEid function
+    - dvn
+        - DVN.sol [extends Worker, MultiSig]
+            - `execute` : external function for
+                - takes in array of signatures (array enough to meet quorum):
+                    - each param has the following: vid (verifier ID | matches EID), target, callData, expiration, signatures
+                - calls receiveULN::verify
+                -
+        - Worker.sol
+            - uses open-zeppelin AccessControl
+                - Roles: AdminRole, MsgLibRole, DenyList, AllowList
+                    - `DenyList / AllowList` are used to whitelist / ban specific OApp senders that can send AssignJob requests
+                    - `MsgLibRole` is used to assert that AssignJob requests can only be sent by Registered Msg Lib
+                    - `AdminRole` is used to assign / revoke other roles
+            - Every worker has a `priceFeed`, and a `feeLib` setup on constructor
+            - uses open-zeppelin Pausable
+                - creates new boolean state variable and modifier which revert all incoming contract calls
+            - Function for admin to withdraw fee
+        - MultiSig.sol
+            - uses open-zeppeling ECDSA (elliptic curve digital signature algorithm)
+            - manages signer addresses and quorum
+                - we manage uniqueness for signers, by requiring a sorted list of signers in the constructor
+            - `verifySignatures` : This is the function called by DVN to verify signatures provided as params to DVN’s execute function
+                - has array of signatures, and original hash
+                - uses ECDSA recover to fetch public key of each signer, and verifies each of those signers are valid
+        - DVNFeeLib.sol
+    - upgradable
+        - Executor.sol
+        - ExecutorFeeLib.sol
+        - PriceFeed.sol
+    - Libs
+        - PacketV1Codec.sol
+            - solidity library, thats used for encoding / decoding from packed bytes ⇒ parameters (for packet data)
+        - ExecutorOptions.sol
+            - same as above
+
+NOTE:
+
+- Functions with \_ in beginning are internal functions
+- function scopes: internal → private, public → protected, external → private
