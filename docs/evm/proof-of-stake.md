@@ -1,0 +1,17 @@
+### Proof of Stake:
+- active validator set vs entry queue and exit queue
+- full lifecycle of a validator
+    - set stake -> pending validator set -> active validator -> exit queue -> exitted
+- how the exit process works
+    - 2 phase exit
+        - active validator -> exit queue -> withdrawable period -> withdrawable sweep
+- understanding staking
+    - native staking
+        - stake / block rewards in beacon chain
+    - liquid staking (LST - liquid staking token)
+        - via 3rd party (lido, coinbase, rocketpool)
+- beacon chain
+- LST (liquid staking token)
+    - 2 types:
+        - value accruing
+        - rebasing
