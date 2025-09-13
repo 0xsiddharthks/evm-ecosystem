@@ -92,6 +92,24 @@ importers:
         specifier: 5.8.2
         version: 5.8.2
 
+  packages/eip1559:
+    devDependencies:
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.15.3
+      eslint:
+        specifier: ^9.31.0
+        version: 9.31.0
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+
   packages/eslint-config:
     devDependencies:
       '@eslint/js':
@@ -127,24 +145,6 @@ importers:
       typescript-eslint:
         specifier: ^8.36.0
         version: 8.36.0(eslint@9.31.0)(typescript@5.8.2)
-
-  packages/merkle-tree:
-    devDependencies:
-      '@repo/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      '@types/node':
-        specifier: ^22.15.3
-        version: 22.15.3
-      eslint:
-        specifier: ^9.31.0
-        version: 9.31.0
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
 
   packages/typescript-config: {}
 
