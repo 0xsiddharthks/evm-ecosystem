@@ -1,4 +1,7 @@
-import { testSdkFactoryProxyActivities } from "../proxyActivities";
+import {
+    testChainSdkFactoryProxyActivities,
+    testSdkFactoryProxyActivities,
+} from "../proxyActivities";
 import * as wf from "@temporalio/workflow";
 
 interface workflowArgs {
@@ -12,7 +15,13 @@ export const testWorkflow = async (args: workflowArgs) => {
         .getSdk()
         .incrementNumber(args.input);
 
-    wf.log.info(`sdk response: , ${incrementedNumber}`);
+    const currentBlockNumber = await testChainSdkFactoryProxyActivities
+        .getSdk("ethereum")
+        .getLatestBlockNumber();
+
+    wf.log.info(
+        `sdk response: ${JSON.stringify({ incrementedNumber, currentBlockNumber })}`
+    );
 
     return;
 };

@@ -9,6 +9,11 @@ export interface SdkDefinition {
     methods: SdkMethod[];
 }
 
+export interface ChainSdkFactory<T> {
+    definition: SdkDefinition;
+    getSdk: (chainName: string) => T;
+}
+
 export interface SdkFactory<T> {
     definition: SdkDefinition;
     getSdk: () => T;

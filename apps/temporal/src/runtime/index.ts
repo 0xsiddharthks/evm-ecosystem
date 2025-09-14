@@ -3,7 +3,7 @@ import {
     NativeConnectionOptions,
     Worker,
 } from "@temporalio/worker";
-import { SdkFactory } from "../sdks";
+import { ChainSdkFactory, SdkFactory } from "../sdks";
 import { ActivityTaskQueues, WorkerTaskQueues } from "../common/taskQueues";
 
 let nativeConnection: NativeConnection;
@@ -38,6 +38,31 @@ const createSdkActivities = (
                 return sdk[method.methodName].bind(sdk)(...args);
             };
         });
+        return res;
+    });
+
+const createChainSdkActivities = (
+    chainNames: string[],
+    chainSdkFactories: ChainSdkFactory<unknown>[]
+): { [key: string]: (...args: any[]) => any }[] =>
+    chainSdkFactories.map((chainSdkFactory) => {
+        const res: { [key: string]: (...args: any[]) => any } = {};
+        let chainSdk: { [key: string]: {} } = {};
+
+        for (const chainName of chainNames) {
+            chainSdkFactory.definition.methods.forEach((method) => {
+                res[
+                    `${chainSdkFactory.definition.name}-${chainName}-${method.methodName}`
+                ] = async (...args: any[]) => {
+                    if (!chainSdk[chainName]) {
+                        chainSdk[chainName] = chainSdkFactory.getSdk(chainName);
+                    }
+                    return chainSdk[chainName][method.methodName].bind(
+                        chainSdk[chainName]
+                    )(...args);
+                };
+            });
+        }
         return res;
     });
 
@@ -111,15 +136,23 @@ export const startWorkers = async (args: {
         namespace: string;
     };
     sdks?: {
-        // TODO: support chain SDK factories
         sdkFactories: SdkFactory<unknown>[];
+        chainSdkFactories: ChainSdkFactory<unknown>[];
+        chainNames: string[];
     };
     workflowsPath: string;
 }) => {
     let activities: Parameters<typeof Worker.create>[0]["activities"];
 
     if (args.sdks) {
-        const activitiesList = createSdkActivities(args.sdks.sdkFactories);
+        const activitiesList = [
+            ...createSdkActivities(args.sdks.sdkFactories),
+            ...createChainSdkActivities(
+                args.sdks.chainNames,
+                args.sdks.chainSdkFactories
+            ),
+        ];
+
         activities = activitiesList.reduce(
             (acc, val) => ({
                 ...acc,

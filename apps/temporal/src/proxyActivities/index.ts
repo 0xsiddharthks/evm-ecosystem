@@ -1,5 +1,9 @@
 import { ActivityTaskQueues } from "../common/taskQueues";
 import { SdkDefinition, SdkMethod, TemporalSdkFactory } from "../sdks";
+import {
+    TEST_CHAIN_SDK_DEFINITION,
+    TestChainSdk,
+} from "../sdks/testChainSdk/model";
 import { TEST_SDK_DEFINITION, TestSdk } from "../sdks/testSdk/model";
 import * as wf from "@temporalio/workflow";
 import { ActivityOptions } from "@temporalio/workflow";
@@ -13,7 +17,6 @@ const defaultActivityOptions: ActivityOptions = {
     },
 };
 
-// Allow creating chain speific activity proxies as well
 const createSdkFactoryProxyActivities = <T>(
     definition: SdkDefinition
 ): TemporalSdkFactory<T> => ({
@@ -35,5 +38,31 @@ const createSdkFactoryProxyActivities = <T>(
     },
 });
 
+const createChainSdkFactoryProxyActivities = <T>(
+    definition: SdkDefinition
+): TemporalSdkFactory<T> => ({
+    definition: definition,
+    getSdk: (chainName: string) => {
+        let res = {} as T;
+
+        definition.methods.forEach((method: SdkMethod) => {
+            res[method.methodName as keyof T] = (async (...args: any[]) => {
+                // TODO: we should specify options overrides on both SDK level and method level
+                const proxy = wf.proxyActivities(defaultActivityOptions);
+                return await proxy[
+                    `${definition.name}-${chainName}-${method.methodName}`
+                ](...args);
+            }) as T[keyof T];
+        });
+
+        return res;
+    },
+});
+
 export const testSdkFactoryProxyActivities =
     createSdkFactoryProxyActivities<TestSdk>(TEST_SDK_DEFINITION);
+
+export const testChainSdkFactoryProxyActivities =
+    createChainSdkFactoryProxyActivities<TestChainSdk>(
+        TEST_CHAIN_SDK_DEFINITION
+    );

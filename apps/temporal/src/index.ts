@@ -1,6 +1,7 @@
 import { startWorkers } from "./runtime";
 import { ActivityTaskQueues, WorkerTaskQueues } from "./common/taskQueues";
 import { testSdkFactory } from "./sdks/testSdk/factory";
+import { testChainSdkFactory } from "./sdks/testChainSdk/factory";
 import * as path from "path";
 
 // TODO: move to environments
@@ -20,6 +21,8 @@ export const run = async () => {
         },
         sdks: {
             sdkFactories: [new testSdkFactory()],
+            chainSdkFactories: [new testChainSdkFactory()],
+            chainNames: ["ethereum"],
         },
         workflowsPath: path.join(__dirname, "./workflows/index"),
     });
